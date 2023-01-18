@@ -1,0 +1,87 @@
+import pandas as pd
+import numpy as np
+pd.set_option('display.max_colwidth', -1)
+
+data = pd.read_csv('jeopardy.csv')
+
+# Exploring the data
+#print(data)
+print(list(data.columns))
+
+# Fixing column names
+colname = []
+for i in list(data.columns):
+  colname.append(i.strip())
+
+#print(colname)
+data1 = data.rename(columns= {a:b for (a,b) in zip(data.columns, colname)})
+#print(data1.head())
+
+# To check how many questions include keywords: king and england
+data1.Question = data1.Question.apply(lambda x: x.lower())
+data1['wh'] = data1.Question.apply(lambda x: 'king' and 'england' in x.split())
+
+#print(data1.groupby(['wh']).Value.count())
+
+num = list(data1.groupby('wh').Value.count())[1]
+#print(num)
+
+# Changing value to float
+def make_flt(string):
+  new = ''
+  newl = string.split(',')
+  if string == 'None':
+    return 0
+  for i in range(len(newl)):
+    new += newl[i]
+  return float(new) 
+
+data1.Value = data1.Value.apply(lambda b: make_flt(b.replace('$', ',')))
+
+#print(data1.Value.head())
+numofnonvalues = list(data1.groupby('Value').Question.count())[0]
+#print(numofnonvalues)
+numoftovalues = data1.groupby('Value').Question.count().sum()
+#print(numoftovalues)
+
+average_of_values = data1.Value.sum() / (numoftovalues - numofnonvalues)
+
+# To see the relationship between value and questions that are related to keywords
+new_data = pd.concat([data1.wh, data1.Value], axis=1)
+
+#print(new_data)
+print(new_data.groupby('wh'))
+new_data1 = new_data[new_data.wh == True]
+print(new_data1.head())
+print(new_data1.mean())
+
+# keyword: king
+data1['wh1'] = data1.Question.apply(lambda x: 'king' in x.split())
+
+data_by_Q = data1[data1.wh1 == True]
+#print(data_by_Q.head())
+new_data_by_qa = pd.concat([data_by_Q.wh1, data_by_Q.Answer], axis = 1)
+#print(new_data_by_qa.groupby('Answer').count())
+
+# Date and Questions to see how much computer is mentioned in different times
+date_que = pd.concat([data1['Air Date'], data1['Question']], axis=1)
+
+print(date_que)
+date_que['whcom'] = date_que.Question.apply(lambda x: 'computer' in x)
+#print(date_que.head())
+date_que_com = date_que[date_que.whcom == True]
+print(date_que_com)
+
+# To see the relationship between round and category
+round_category = pd.concat([data1.Round, data1.Category], axis=1)
+
+print(round_category.groupby('Category').count())
+print(round_category.groupby('Round').count())
+
+round_category.Category = round_category.Category.apply(lambda x: x.lower())
+round_category['whlit'] = round_category.Category.apply(lambda x: 'literature' in x)
+print(round_category.head())
+print(round_category.groupby('whlit').Round.count())
+
+round_category_wlit = round_category[round_category.whlit == True]
+print(round_category_wlit.groupby('Round').count())
